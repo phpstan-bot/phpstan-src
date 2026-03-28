@@ -2,8 +2,9 @@ name: "Claude Random Fixes (Scheduled)"
 
 on:
   schedule:
-    # Run every day, 4 times, once an hour at :15, from 2pm CET (13:00 UTC) to 5pm CET (16:00 UTC)
-    - cron: '15 13-16 * * *'
+    # Run every day, 4 times, once an hour at :15
+    - cron: '15 0-3 * * *'
+      timezone: "Europe/Prague"
 
 permissions:
   contents: read
