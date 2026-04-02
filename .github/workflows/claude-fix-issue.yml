@@ -121,6 +121,7 @@ jobs:
             - src/Reflection/ - Reflection layer
 
             Read CLAUDE.md for important guidelines about the codebase architecture and common patterns.
+            In case your fix changes more than 75 lines in src/ try a different fix.
 
             ## Step 3: Verify the fix
 
@@ -128,8 +129,9 @@ jobs:
             2. Run the full test suite: make tests
             3. Run PHPStan self-analysis: make phpstan
             4. Fix any failures that come up
-            5. Run make cs-fix to fix any coding standard violations
-            6. Run make name-collision and fix violations - add different tests in unique namespaces. If the function and class declarations are exactly the same, you can reuse them across files instead of duplicating them.
+            5. Verify all src/ changes made are really required to make the tests pass. Revert/Remove changes which are unrelated.
+            6. Run make cs-fix to fix any coding standard violations
+            7. Run make name-collision and fix violations - add different tests in unique namespaces. If the function and class declarations are exactly the same, you can reuse them across files instead of duplicating them.
 
             Do not create a branch, push, or create a PR - this will be handled automatically.
 
