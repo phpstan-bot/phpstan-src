@@ -345,6 +345,7 @@ jobs:
           prompt+=$'\n'
           prompt+="Commit each logical change separately with a descriptive message."
           prompt+="Push the commits in the repo."
+          prompt+="The results of this prompt will be posted to the pull request in a separate step."
 
           {
             echo 'PROMPT<<PROMPT_DELIMITER'
