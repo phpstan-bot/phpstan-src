@@ -98,46 +98,102 @@ jobs:
             Issue phpstan/phpstan#${{ inputs.issue-number }}: ${{ steps.issue.outputs.title }}
             URL: ${{ steps.issue.outputs.url }}
 
-            Issue body is in the file /tmp/issue-body.txt — read it before proceeding.
+            The issue body (including all comments) has been saved to /tmp/issue-body.txt.
 
-            ## Step 1: Write a regression test
+            ## IMPORTANT — read before you start
 
-            Read .claude/skills/regression-test/SKILL.md for detailed guidance on writing regression tests for PHPStan bugs.
+            - **Read CLAUDE.md first.** It contains the codebase architecture, common bug-fix patterns, and conventions you must follow (e.g. never use \`instanceof\` to check type properties — use \`isSuperTypeOf()\` / \`isString()->yes()\` instead; prefer adding methods to the \`Type\` interface over scattered \`instanceof\` checks).
+            - **Think in parallel cases, not in isolation.** This is the most important instruction. A PHPStan bug report almost always describes *one* instance of a more general problem. Before and after implementing the fix, ask: *which other PHP constructs, type classes, or rules are structurally analogous and therefore likely to have the same bug?* Then write failing tests for those cases too and fix them with the same approach. Step 4 below tells you exactly how to do this — do not skip it.
+            - **Do not create new markdown/docs files.** No summaries, no notes, no README updates.
+            - **Do not create a branch, push, or create a PR** — that is handled automatically after you finish.
+            - **Use TodoWrite** to track your progress through the steps below. Update tasks as you go, and add new todos when you discover analogous cases worth fixing.
 
-            The issue body is already provided above — start from Step 2 of the skill (deciding test type). For Step 1 (gathering context), you only need to fetch the playground samples from any playground links found in the issue body.
+            ## Step 1: Gather context and classify the bug
 
-            Skip Steps 5-6 of the skill (reverting fix and committing) — those are not needed here.
+            1. Read \`/tmp/issue-body.txt\` carefully, including all comments.
+            2. Fetch any PHPStan playground samples linked in the issue body (the sample code is the ground truth for the reproduction).
+            3. Identify which subsystem the bug lives in. Common areas:
+               - \`src/Analyser/NodeScopeResolver.php\` — AST traversal, control flow, variable assignments
+               - \`src/Analyser/MutatingScope.php\` — type tracking, scope state
+               - \`src/Analyser/TypeSpecifier.php\` — type narrowing from conditions (\`instanceof\`, \`is_*()\`, \`===\`, etc.)
+               - \`src/Type/\` — type system implementations (\`Type\` interface and its implementations, \`TypeCombinator\`)
+               - \`src/Rules/\` — individual analysis rules, organized by category
+               - \`src/Reflection/\` — reflection layer, \`ClassReflection\`, \`ParametersAcceptor\`
+               - \`src/PhpDoc/\` — PHPDoc parsing and type node resolution
+            4. Read the relevant files to understand the current behavior before changing anything. Form a hypothesis for the root cause before writing code.
 
-            The regression test should fail without the fix — verify this by running it before implementing the fix.
+            ## Step 2: Write a regression test
 
-            ## Step 2: Fix the bug
+            Read \`.claude/skills/regression-test/SKILL.md\` for detailed guidance on writing regression tests for PHPStan bugs.
 
-            Implement the fix in the source code under src/. Common areas to look:
-            - src/Analyser/NodeScopeResolver.php - AST traversal and scope management
-            - src/Analyser/MutatingScope.php - Type tracking
-            - src/Analyser/TypeSpecifier.php - Type narrowing from conditions
-            - src/Type/ - Type system implementations
-            - src/Rules/ - Rule implementations
-            - src/Reflection/ - Reflection layer
+            Since the issue body is already provided, start from Step 2 of the skill (deciding test type). For Step 1 (gathering context) you only need the playground samples you already fetched. Skip Steps 5–6 (reverting fix and committing) — they are not needed here.
 
-            Read CLAUDE.md for important guidelines about the codebase architecture and common patterns.
-            In case your fix changes more than 75 lines in src/ try a different fix.
+            The regression test MUST fail without the fix. Run it before implementing the fix to confirm it reproduces the bug.
 
-            ## Step 3: Verify the fix
+            ## Step 3: Fix the reported bug
 
-            1. Run the regression test to confirm it passes now
-            2. Run the full test suite: make tests
-            3. Run PHPStan self-analysis: make phpstan
-            4. Fix any failures that come up
-            5. Verify all src/ changes made are really required to make the tests pass. Revert/Remove changes which are unrelated.
-            6. Run make cs-fix to fix any coding standard violations
-            7. Run make name-collision and fix violations - add different tests in unique namespaces. If the function and class declarations are exactly the same, you can reuse them across files instead of duplicating them.
+            Implement the fix in \`src/\` following the guidance in CLAUDE.md:
+            - When you need to query a property of a type, prefer \`$type->isX()\` / \`isSuperTypeOf()\` over \`instanceof\`.
+            - If the check is needed in more than one place, add a method to the \`Type\` interface instead of scattering \`instanceof\` checks — every type implementation (including \`UnionType\`, \`IntersectionType\`, accessory types) needs to handle the query correctly.
+            - Respect the \`@api\` backward-compatibility promise — do not break public method signatures on \`@api\`-tagged classes/interfaces.
+            - Keep comments to a minimum: only add a comment when the *why* is non-obvious.
 
-            Do not create a branch, push, or create a PR - this will be handled automatically.
+            Run the regression test from Step 2 to confirm it now passes. Then continue to Step 4 — **do not stop here.**
 
-            ## Step 4: Write a summary
+            ## Step 4: Hunt for analogous bugs and expand the fix
 
-            After completing the fix, write three files:
+            This is the step that distinguishes a good fix from a great one. The bug the user reported is usually one visible instance of a wider pattern. Your job is to find the other instances, prove they are broken with failing tests, and fix them with the same approach.
+
+            **How to think about it:** identify the *conceptual axis* along which PHP (or PHPStan's type system) offers parallel constructs. If your fix touches one construct on that axis, the other constructs on the same axis are prime suspects. Write a failing test for each suspect you can think of. For every suspect that actually fails, apply the same fix in the analogous location in the codebase and verify the test passes.
+
+            **Parallel-construct axes to consider** (use this as a thinking prompt, not an exhaustive list):
+
+            - **Class members**: properties ↔ methods ↔ class constants ↔ enum cases. A bug about readonly **properties** may also affect method visibility checks, class constant visibility, or enum case access. A bug about property hooks may have a twin in promoted constructor properties, asymmetric visibility, or \`#[\\Override]\`. Static vs instance members are another axis on the same group.
+            - **Callables**: functions ↔ methods ↔ static methods ↔ closures ↔ arrow functions ↔ first-class callable syntax (\`foo(...)\`) ↔ \`__invoke\`. A bug in \`FunctionCallParametersCheck\` very often has a twin in the method-call or static-method-call equivalents.
+            - **Type-narrowing functions**: \`is_int\` / \`is_string\` / \`is_float\` / \`is_bool\` / \`is_array\` / \`is_object\` / \`is_callable\` / \`is_iterable\` / \`is_numeric\` / \`is_countable\` — these live in parallel in \`TypeSpecifier\` and \`FunctionTypeSpecifyingExtension\`s. A fix to one \`is_*\` narrowing almost always needs a mirror fix in the others.
+            - **Type-check operators**: \`instanceof\` ↔ \`is_a()\` ↔ \`is_subclass_of()\` ↔ \`get_class() === X::class\`. Similarly: \`isset\` ↔ \`array_key_exists\` ↔ \`??\` ↔ \`empty\` ↔ null-safe operator \`?->\`.
+            - **Type-system "families"**:
+              - **Accessory string types**: \`AccessoryNonEmptyStringType\`, \`AccessoryNonFalsyStringType\`, \`AccessoryLiteralStringType\`, \`AccessoryLowercaseStringType\`, \`AccessoryUppercaseStringType\`, \`AccessoryNumericStringType\`. A bug in one (e.g. string operations not preserving non-empty-ness) is almost certainly also a bug in the others (not preserving lowercase-ness, numeric-ness, etc.).
+              - **Accessory array types**: \`NonEmptyArrayType\`, \`AccessoryArrayListType\`, \`HasOffsetType\`, \`HasOffsetValueType\`, \`OversizedArrayType\`. Same logic — if an array operation loses non-empty-ness, does it also lose list-ness?
+              - **Constant types**: \`ConstantStringType\`, \`ConstantIntegerType\`, \`ConstantFloatType\`, \`ConstantBooleanType\`, \`ConstantArrayType\`. A constant-folding bug in one scalar flavor usually exists in the others.
+              - **Integer refinements**: \`IntegerType\` ↔ \`IntegerRangeType\` ↔ \`ConstantIntegerType\`.
+              - **Object-ish types**: \`ObjectType\` ↔ \`GenericObjectType\` ↔ \`StaticType\` ↔ \`ThisType\` ↔ \`EnumCaseObjectType\`.
+              - **Composite types**: \`UnionType\` ↔ \`IntersectionType\`. If one gets wrong answers under a new operation, check the other.
+              - **Generics bounds**: covariant ↔ contravariant ↔ invariant templates; \`@template\` ↔ \`@template-covariant\` ↔ \`@template-contravariant\`; \`extends\` ↔ \`super\` bounds.
+              - **TypeSpecifier contexts**: truthy ↔ falsey ↔ true ↔ false ↔ null. A narrowing bug in the truthy branch frequently has a mirror in the falsey branch.
+            - **PHPDoc tags**: \`@param\` ↔ \`@return\` ↔ \`@var\` ↔ \`@property\` ↔ \`@phpstan-assert\` ↔ \`@throws\`. A PHPDoc parser or resolution bug in one tag often affects the others.
+            - **Rules directories**: \`src/Rules/Classes/\` ↔ \`Methods/\` ↔ \`Properties/\` ↔ \`Functions/\` ↔ \`Variables/\`. Rules in these folders often come in families — an undefined-member check or a visibility check usually has siblings across categories.
+            - **Reflection layer**: method reflection ↔ property reflection ↔ constant reflection; \`ClassReflection\` ↔ \`EnumCaseReflection\`.
+
+            **Procedure:**
+
+            1. Before implementing the fix in Step 3, already jot down (in your TodoWrite list) which axis this bug sits on and which other constructs you should probe afterward.
+            2. After the Step 3 fix is green, for each suspect on the axis, write a small failing test (same format as your Step 2 regression test). Run it.
+               - If it passes already, great — the analogous case is not broken, move on. Discard the extra test (do not keep tests that exist only to prove non-bugs) unless it covers a plausible future regression of the same code path.
+               - If it fails, apply the analogous fix in the analogous location (e.g. the sibling accessory type, the sibling \`is_*\` specifier, the sibling rule) and confirm the test now passes. Keep the test.
+            3. When adding a new method to the \`Type\` interface as part of your fix, this is an especially strong hint to audit every implementation of the interface — \`UnionType\`, \`IntersectionType\`, and accessory types all need correct implementations, not just the one that prompted the bug.
+            4. Do not force-invent bugs. If after honest probing the analogous constructs really are fine, document that briefly in your commit message so a reviewer can see you considered them. But err on the side of probing more, not less — the user strongly prefers fixes that sweep an entire family of bugs at once over fixes that leave siblings broken.
+
+            There is no upper bound on diff size for this step. A 500-line diff that correctly fixes eight parallel cases is much better than a 20-line diff that fixes one and leaves seven sibling bugs for later.
+
+            ## Step 5: Verify everything
+
+            Run these in order and iterate until everything is green. Do NOT give up on the first failure — diagnose and fix each problem.
+
+            1. Run all the regression tests you added (the original one plus any analogous-case tests from Step 4) and confirm they all pass.
+            2. Run the full test suite: \`make tests\`
+            3. Run PHPStan self-analysis: \`make phpstan\`
+            4. Fix any failures. If a pre-existing test now fails, figure out whether:
+               (a) it was asserting the buggy behavior and should be updated to match the corrected behavior, or
+               (b) your fix over-reached and broke something unrelated — in which case narrow the fix.
+               Prefer (a) when the old assertion is clearly wrong under the new, correct behavior.
+            5. Run \`make cs-fix\` to fix coding-standard violations.
+            6. Run \`make name-collision\` and fix violations — put new tests in unique namespaces. If a function/class declaration is exactly the same as one already used, reuse it rather than duplicating.
+            7. Re-run \`make tests\` one final time after cs-fix / name-collision fixes to make sure nothing regressed.
+
+            ## Step 6: Write a summary
+
+            After completing the fix, write three files. These files are critical — they are used for the PR title, commit message, and PR description, and the workflow will fail to produce a good PR if they are missing or low-quality.
 
             1. /tmp/pr-title.txt - A single-line PR title that describes **what the change does**, not what it fixes. Write it as a precise, technical description of the actual code change you made.
 
@@ -161,7 +217,7 @@ jobs:
                - "Fix bug with generics" (vague, not technical)
                - "Two unbounded generics in conditional return are assumed to be always the same" (describes symptom, not fix)
 
-            2. /tmp/commit-message.txt - A concise commit message. The first line MUST be identical to the contents of /tmp/pr-title.txt. Then a blank line, then a few bullet points describing the key changes (what code was changed and why, in technical terms).
+            2. /tmp/commit-message.txt - A concise commit message. The first line MUST be identical to the contents of /tmp/pr-title.txt. Then a blank line, then a few bullet points describing the key changes (what code was changed and why, in technical terms). If you fixed analogous cases in Step 4, list each one briefly.
 
             3. /tmp/pr-description.md - A pull request description in this format:
                ## Summary
@@ -170,16 +226,17 @@ jobs:
                ## Changes
                - Bullet points of specific code changes made
                - Reference file paths where changes were made
+               - List every analogous case you also fixed (or explicitly note the ones you probed and found to be already correct)
 
                ## Root cause
-               Explain why the bug happened and how the fix addresses it.
+               Explain why the bug happened and how the fix addresses it. If the root cause is a pattern (e.g. "accessory types don't preserve their refinement through string concatenation"), name the pattern and list every location that was affected.
 
                ## Test
-               Describe the regression test that was added.
+               Describe the regression test for the reported bug AND any additional tests you added for analogous cases in Step 4.
 
                Fixes phpstan/phpstan#${{ inputs.issue-number }}
 
-            These files are critical - they will be used for the PR title, commit message, and PR description. The PR title and commit subject line must describe **what the change does**, not what it fixes.
+            Remember: the PR title and commit subject line must describe **what the change does**, not what it fixes.
           PROMPT_EOF
           )"
 
