@@ -137,16 +137,33 @@ jobs:
 
             ## Step 4: Write a summary
 
-            After completing the fix, write two files:
+            After completing the fix, write three files:
 
-            1. /tmp/commit-message.txt - A concise commit message (first line: short summary under 72 chars, then a blank line, then a few bullet points describing key changes). Example:
-               Fix array_key_exists narrowing for template types
+            1. /tmp/pr-title.txt - A single-line PR title that describes **what the change does**, not what it fixes. Write it as a precise, technical description of the actual code change you made.
 
-               - Added handling for TemplateType in TypeSpecifier when processing array_key_exists
-               - New regression test in tests/PHPStan/Analyser/nsrt/bug-12345.php
-               - The root cause was that TypeSpecifier did not unwrap template bounds before narrowing
+               Style rules:
+               - Use imperative voice describing the action taken in the source code (e.g. "Report ...", "Do not ...", "Use ... instead of ...", "Narrow ... when ...")
+               - Be specific about classes, methods, or PHP constructs involved — use backticks for code identifiers (e.g. `??`, `IntersectionTypeMethodReflection`, `TemplateType`)
+               - Describe the mechanism of the fix, not the symptom or the issue
+               - Do NOT start with "Fix", "Bug:", "Issue:", or reference issue numbers
+               - Do NOT just restate the issue title
+               - Keep it under ~120 characters but do not sacrifice precision for brevity
 
-            2. /tmp/pr-description.md - A pull request description in this format:
+               Good examples (study these carefully — match this style):
+               - "Report promoted readonly or hooked non-nullable properties on the left side of \`??\`"
+               - "Do not subtract TemplateType from TemplateType"
+               - "IntersectionTypeMethodReflection: select method with most parameters instead of first one to query information"
+               - "Narrow array key type after \`array_key_exists\` on intersection types"
+               - "Preserve list type when assigning to existing offset"
+
+               Bad examples (do NOT write titles like these):
+               - "Fix phpstan/phpstan#14459: Null coalescing operator does not report redundant left operand when always defined" (restates issue, mentions issue number)
+               - "Fix bug with generics" (vague, not technical)
+               - "Two unbounded generics in conditional return are assumed to be always the same" (describes symptom, not fix)
+
+            2. /tmp/commit-message.txt - A concise commit message. The first line MUST be identical to the contents of /tmp/pr-title.txt. Then a blank line, then a few bullet points describing the key changes (what code was changed and why, in technical terms).
+
+            3. /tmp/pr-description.md - A pull request description in this format:
                ## Summary
                Brief description of what the issue was about and what the fix does.
 
@@ -162,7 +179,7 @@ jobs:
 
                Fixes phpstan/phpstan#${{ inputs.issue-number }}
 
-            These files are critical - they will be used for the commit message and PR description.
+            These files are critical - they will be used for the PR title, commit message, and PR description. The PR title and commit subject line must describe **what the change does**, not what it fixes.
           PROMPT_EOF
           )"
 
@@ -170,7 +187,15 @@ jobs:
         id: claude-summary
         env:
           ISSUE_NUMBER: ${{ inputs.issue-number }}
+          ISSUE_TITLE: ${{ steps.issue.outputs.title }}
         run: |
+          if [ -f /tmp/pr-title.txt ]; then
+            PR_TITLE=$(head -n 1 /tmp/pr-title.txt)
+            echo "pr_title=$PR_TITLE" >> "$GITHUB_OUTPUT"
+          else
+            echo "pr_title=Fix phpstan/phpstan#$ISSUE_NUMBER: $ISSUE_TITLE" >> "$GITHUB_OUTPUT"
+          fi
+
           if [ -f /tmp/commit-message.txt ]; then
             delimiter="EOF_$(openssl rand -hex 16)"
             {
@@ -202,7 +227,7 @@ jobs:
           push-to-fork: phpstan-bot/phpstan-src
           branch-suffix: random
           delete-branch: true
-          title: "Fix phpstan/phpstan#${{ inputs.issue-number }}: ${{ steps.issue.outputs.title }}"
+          title: ${{ steps.claude-summary.outputs.pr_title }}
           body: ${{ steps.claude-summary.outputs.pr_body }}
           committer: "phpstan-bot <ondrej+phpstanbot@mirtes.cz>"
           commit-message: ${{ steps.claude-summary.outputs.commit_message }}
