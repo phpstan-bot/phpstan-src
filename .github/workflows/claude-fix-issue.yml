@@ -246,33 +246,66 @@ jobs:
           ISSUE_NUMBER: ${{ inputs.issue-number }}
           ISSUE_TITLE: ${{ steps.issue.outputs.title }}
         run: |
-          if [ -f /tmp/pr-title.txt ]; then
-            PR_TITLE=$(head -n 1 /tmp/pr-title.txt)
-            echo "pr_title=$PR_TITLE" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+
+          # Writes a (possibly multiline) value from a file into $GITHUB_OUTPUT
+          # using the heredoc-style delimited syntax. This is robust against:
+          #   - files without a trailing newline (the runner requires the
+          #     closing delimiter to be on its own line, otherwise it errors
+          #     with "Matching delimiter not found")
+          #   - CRLF line endings
+          #   - the (vanishingly unlikely) chance that the random delimiter
+          #     happens to appear inside the file content
+          write_multiline_output() {
+            local key=$1
+            local file=$2
+            local delimiter
+            local content
+
+            # Strip CRs and ensure exactly one trailing newline so the closing
+            # delimiter always lands on its own line.
+            content=$(tr -d '\r' < "$file")
+
+            # Pick a delimiter that is guaranteed not to appear in the content.
+            while :; do
+              delimiter="GHA_EOF_$(openssl rand -hex 16)"
+              if ! printf '%s' "$content" | grep -qxF "$delimiter"; then
+                break
+              fi
+            done
+
+            {
+              printf '%s<<%s\n' "$key" "$delimiter"
+              printf '%s\n' "$content"
+              printf '%s\n' "$delimiter"
+            } >> "$GITHUB_OUTPUT"
+          }
+
+          write_singleline_output() {
+            local key=$1
+            local value=$2
+            # Single-line outputs cannot contain newlines; collapse defensively.
+            value=$(printf '%s' "$value" | tr '\r\n' '  ')
+            printf '%s=%s\n' "$key" "$value" >> "$GITHUB_OUTPUT"
+          }
+
+          if [ -s /tmp/pr-title.txt ]; then
+            PR_TITLE=$(head -n 1 /tmp/pr-title.txt | tr -d '\r')
+            write_singleline_output "pr_title" "$PR_TITLE"
           else
-            echo "pr_title=Fix phpstan/phpstan#$ISSUE_NUMBER: $ISSUE_TITLE" >> "$GITHUB_OUTPUT"
+            write_singleline_output "pr_title" "Fix phpstan/phpstan#$ISSUE_NUMBER: $ISSUE_TITLE"
           fi
 
-          if [ -f /tmp/commit-message.txt ]; then
-            delimiter="EOF_$(openssl rand -hex 16)"
-            {
-              echo "commit_message<<${delimiter}"
-              cat /tmp/commit-message.txt
-              echo "${delimiter}"
-            } >> "$GITHUB_OUTPUT"
+          if [ -s /tmp/commit-message.txt ]; then
+            write_multiline_output "commit_message" /tmp/commit-message.txt
           else
-            echo "commit_message=Fix #$ISSUE_NUMBER" >> "$GITHUB_OUTPUT"
+            write_singleline_output "commit_message" "Fix #$ISSUE_NUMBER"
           fi
 
-          if [ -f /tmp/pr-description.md ]; then
-            delimiter="EOF_$(openssl rand -hex 16)"
-            {
-              echo "pr_body<<${delimiter}"
-              cat /tmp/pr-description.md
-              echo "${delimiter}"
-            } >> "$GITHUB_OUTPUT"
+          if [ -s /tmp/pr-description.md ]; then
+            write_multiline_output "pr_body" /tmp/pr-description.md
           else
-            echo "pr_body=Fixes phpstan/phpstan#$ISSUE_NUMBER" >> "$GITHUB_OUTPUT"
+            write_singleline_output "pr_body" "Fixes phpstan/phpstan#$ISSUE_NUMBER"
           fi
 
       - name: "Create Pull Request"
