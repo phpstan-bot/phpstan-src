@@ -119,6 +119,22 @@ jobs:
           fi
 
           echo "pr_head_ref=$(jq -r '.head.ref' /tmp/pr.json)" >> "$GITHUB_OUTPUT"
+          echo "pr_head_sha=$(jq -r '.head.sha' /tmp/pr.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Post pending status check
+        env:
+          GH_TOKEN: ${{ secrets.PHPSTAN_BOT_PR_TOKEN }}
+          PR_HEAD_SHA: ${{ steps.review.outputs.pr_head_sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        continue-on-error: true
+        run: |
+          gh api \
+            --method POST \
+            "repos/phpstan/phpstan-src/statuses/$PR_HEAD_SHA" \
+            -f state=pending \
+            -f context=phpstan-bot/review \
+            -f description="Claude is addressing the review..." \
+            -f target_url="$RUN_URL"
 
       - name: "Checkout"
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
@@ -357,6 +373,7 @@ jobs:
         run: npm install -g @anthropic-ai/claude-code
 
       - name: Run Claude
+        id: run-claude
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           GH_TOKEN: ${{ secrets.PHPSTAN_BOT_FORK_TOKEN }}
@@ -393,3 +410,27 @@ jobs:
           || gh pr comment "${{ inputs.pr_number }}" \
             --repo "phpstan/phpstan-src" \
             --body "$body"
+
+      - name: Post final status check
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.PHPSTAN_BOT_PR_TOKEN }}
+          PR_HEAD_SHA: ${{ steps.review.outputs.pr_head_sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          CLAUDE_OUTCOME: ${{ steps.run-claude.outcome }}
+        run: |
+          if [ "$CLAUDE_OUTCOME" = "success" ]; then
+            state=success
+            description="Review addressed"
+          else
+            state=failure
+            description="Failed to address review"
+          fi
+
+          gh api \
+            --method POST \
+            "repos/phpstan/phpstan-src/statuses/$PR_HEAD_SHA" \
+            -f state="$state" \
+            -f context=phpstan-bot/review \
+            -f description="$description" \
+            -f target_url="$RUN_URL"
