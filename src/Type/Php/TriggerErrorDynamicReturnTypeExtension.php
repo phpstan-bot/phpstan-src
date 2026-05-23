@@ -49,11 +49,7 @@ final class TriggerErrorDynamicReturnTypeExtension implements DynamicFunctionRet
 		if ($errorType instanceof ConstantIntegerType) {
 			$errorLevel = $errorType->getValue();
 
-			if ($errorLevel === E_USER_ERROR) {
-				return new ConstantBooleanType(true);
-			}
-
-			if (!in_array($errorLevel, [E_USER_WARNING, E_USER_NOTICE, E_USER_DEPRECATED], true)) {
+			if (!in_array($errorLevel, [E_USER_ERROR, E_USER_WARNING, E_USER_NOTICE, E_USER_DEPRECATED], true)) {
 				if ($this->phpVersion->throwsValueErrorForInternalFunctions()) {
 					return new NeverType(true);
 				}
