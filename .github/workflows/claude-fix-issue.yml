@@ -36,7 +36,7 @@ jobs:
       - name: "Checkout"
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
-          ref: 2.1.x
+          ref: 2.2.x
           repository: phpstan/phpstan-src
           fetch-depth: 0
 
