@@ -89,7 +89,7 @@ jobs:
           git config user.name "phpstan-bot"
           git config user.email "ondrej+phpstanbot@mirtes.cz"
 
-          claude --model claude-opus-4-6 \
+          claude --model claude-opus-4-8 \
           --dangerously-skip-permissions \
           -p "$(cat << 'PROMPT_EOF'
             You are working on phpstan/phpstan-src, the source code of PHPStan - a PHP static analysis tool.
