@@ -92,6 +92,7 @@ jobs:
             - Nette parameters: `debugMode`, `productionMode`, `tempDir`, `__validate`
             - DerivativeContainerFactory internals: `additionalConfigFiles`, `generateBaselineFile`, `analysedPaths`, `allConfigFiles`, `composerAutoloaderProjectPaths`, `analysedPathsFromConfig`, `usedLevel`, `cliAutoloadFile`
             - Editor mode internals: `singleReflectionFile`, `singleReflectionInsteadOfFile`
+            - exceptions.check.tooWideThrowType (it's already true by default, will be removed in PHPStan 3.0)
 
           Also skip these internal parameters that users should not configure directly:
           - `strictRulesInstalled`, `deprecationRulesInstalled` (set by installing packages, not by users)
