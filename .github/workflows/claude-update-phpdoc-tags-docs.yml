@@ -47,7 +47,7 @@ jobs:
           git config user.name "phpstan-bot"
           git config user.email "ondrej+phpstanbot@mirtes.cz"
 
-          claude --model claude-opus-4-8 \
+          claude --model "${{ vars.CLAUDE_MODEL }}" \
           --dangerously-skip-permissions \
           -p "$(cat << 'PROMPT_EOF'
 
