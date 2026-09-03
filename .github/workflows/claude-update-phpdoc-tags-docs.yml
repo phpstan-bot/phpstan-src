@@ -26,13 +26,13 @@ jobs:
       - name: "Checkout phpstan-dist"
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
-          ref: 2.2.x
+          ref: 2.3.x
           repository: phpstan/phpstan
 
       - name: "Checkout phpstan-src"
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
-          ref: 2.2.x
+          ref: 2.3.x
           repository: phpstan/phpstan-src
           path: __phpstan-src
 
@@ -175,7 +175,7 @@ jobs:
           push-to-fork: phpstan-bot/phpstan
           branch-suffix: random
           delete-branch: true
-          base: 2.2.x
+          base: 2.3.x
           title: "Update PHPDoc Tags Docs"
           body: ${{ steps.claude-summary.outputs.pr_body }}
           committer: "phpstan-bot <ondrej+phpstanbot@mirtes.cz>"
