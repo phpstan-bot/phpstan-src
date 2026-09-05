@@ -1408,6 +1408,20 @@ jobs:
               cd e2e/bug-14305
               ../../bin/phpstan
           - script: |
+              # A userland class named `Resource` is a class, not the `resource` pseudo-type,
+              # on every phpVersion: https://phpstan.org/r/47fe50ab-e9de-4e20-8093-b24400e53d66
+              # The `resource` native type in the pre-PHP 8 PhpStorm stubs is the pseudo-type,
+              # which is what https://github.com/phpstan/phpstan/issues/15141 was about.
+              cd e2e/bug-15141
+              OUTPUT=$(../bashunit -a exit_code "1" "../../bin/phpstan analyse --no-progress --error-format raw")
+              echo "$OUTPUT"
+              ../bashunit -a contains 'test.php:13:Parameter #1 $r of function doFoo expects Resource, resource given.' "$OUTPUT"
+              ../bashunit -a equals '1' "$(echo "$OUTPUT" | grep -Ec '^/.+:[0-9]+:')"
+              OUTPUT=$(../bashunit -a exit_code "1" "../../bin/phpstan analyse --no-progress --error-format raw -c php74.neon")
+              echo "$OUTPUT"
+              ../bashunit -a contains 'test.php:13:Parameter #1 $r of function doFoo expects Resource, resource given.' "$OUTPUT"
+              ../bashunit -a equals '1' "$(echo "$OUTPUT" | grep -Ec '^/.+:[0-9]+:')"
+          - script: |
               cd e2e/composer-and-phpstan-version-config
               composer install --ignore-platform-reqs
               ../../bin/phpstan analyze test.php --level=0
