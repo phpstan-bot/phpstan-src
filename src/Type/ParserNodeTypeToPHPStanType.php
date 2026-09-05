@@ -26,8 +26,11 @@ final class ParserNodeTypeToPHPStanType
 		} elseif ($type instanceof Name) {
 			$typeClassName = (string) $type;
 			$lowercasedClassName = strtolower($typeClassName);
-			if ($lowercasedClassName === 'resource') {
-				// PhpStorm stubs describe pre-PHP 8 signatures with a `resource` native type
+			if ($typeClassName === 'resource') {
+				// PhpStorm stubs describe pre-PHP 8 signatures with a `resource` native type.
+				// Compared case-sensitively on purpose: PHP has no `resource` native type,
+				// it reads such a typehint as a class name, so a userland class named
+				// `Resource` has to keep resolving to an object type.
 				return new ResourceType();
 			}
 
