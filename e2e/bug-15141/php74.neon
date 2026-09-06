@@ -4,3 +4,4 @@ parameters:
 	paths:
 		- test.php
 		- resource-pseudo-type.php
+		- resource-pseudo-type-errors.php
