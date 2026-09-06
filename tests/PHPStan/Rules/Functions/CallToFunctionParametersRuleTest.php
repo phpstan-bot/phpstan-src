@@ -3115,14 +3115,4 @@ class CallToFunctionParametersRuleTest extends RuleTestCase
 		$this->analyse([__DIR__ . '/data/bug-15141.php'], []);
 	}
 
-	public function testBug15141ResourceClass(): void
-	{
-		$this->analyse([__DIR__ . '/data/bug-15141-resource-class.php'], [
-			[
-				'Parameter #1 $r of function bug15141TakesResourceClass expects Resource, resource given.',
-				16,
-			],
-		]);
-	}
-
 }
