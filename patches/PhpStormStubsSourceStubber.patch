@@ -1,0 +1,17 @@
+--- a/src/SourceLocator/SourceStubber/PhpStormStubsSourceStubber.php
++++ b/src/SourceLocator/SourceStubber/PhpStormStubsSourceStubber.php
+@@ -991,6 +991,14 @@
+             return null;
+         }
+ 
++        // `resource` is a pseudo-type, PHP has no such native type - a `resource`
++        // typehint is read back as a class name. Stubs use it in
++        // `#[LanguageLevelTypeAware]` to describe pre-PHP 8 signatures, so drop the
++        // native type there and let the PHPDoc in the same stub describe the type.
++        if (in_array('resource', explode('|', ltrim($type, '?')), true)) {
++            return null;
++        }
++
+         /** @psalm-suppress InternalClass, InternalMethod */
+         return BuilderHelpers::normalizeType($type);
+     }
