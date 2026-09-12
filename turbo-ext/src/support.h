@@ -81,6 +81,17 @@ enum {
 	PT_CLASS_ARROW_FUNCTION,
 	PT_CLASS_TYPE,
 	PT_CLASS_RECURSION_GUARD,
+	PT_CLASS_EMIT_COLLECTED_DATA_NODE,
+	PT_CLASS_IN_TRAIT_NODE,
+	PT_CLASS_IN_CLASS_NODE,
+	PT_CLASS_TRAIT_STMT,
+	PT_CLASS_ANALYSED_CODE_EXCEPTION,
+	PT_CLASS_IDENTIFIER_NOT_FOUND,
+	PT_CLASS_UNABLE_TO_COMPILE_NODE,
+	PT_CLASS_CIRCULAR_REFERENCE,
+	PT_CLASS_FILE_DEPENDENCIES_RULE_ERROR,
+	PT_CLASS_ANALYSER_ERROR,
+	PT_CLASS_INTERNAL_ERROR,
 	/* classes the extension instantiates (their PHP twins are themselves
 	 * shadowed, hence no default name): configured to the stub subclasses
 	 * so created objects satisfy the original PHPStan type hints */
@@ -150,6 +161,7 @@ void pt_register_scope_ops();
 void pt_register_node_scanner();
 void pt_register_parser_runner();
 void pt_register_type_combinator_cache();
+void pt_register_file_analyser_callback();
 void pt_register_arena_cache();
 void pt_register_expression_result_storage();
 void pt_register_php_file_cleaner();
@@ -162,6 +174,7 @@ void pt_scope_ops_rinit();
 void pt_scope_ops_rshutdown();
 void pt_type_combinator_cache_rinit();
 void pt_type_combinator_cache_rshutdown();
+void pt_file_analyser_callback_rshutdown();
 
 /* module-shutdown backstop: destroys the arena mapping if the run skipped
  * ArenaCache::destroy() on a graceful exit */

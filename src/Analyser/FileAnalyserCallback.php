@@ -18,6 +18,7 @@ use PHPStan\Node\InTraitNode;
 use PHPStan\Parser\Parser;
 use PHPStan\Rules\FileDependenciesRuleError;
 use PHPStan\Rules\Registry as RuleRegistry;
+use PHPStan\Turbo\ShadowedByTurboExtension;
 use function array_keys;
 use function get_class;
 use function sprintf;
@@ -27,6 +28,7 @@ use function sprintf;
  * @phpstan-import-type Identifier from FileAnalyserResult
  * @phpstan-import-type LinesToIgnore from FileAnalyserResult
  */
+#[ShadowedByTurboExtension(turboClass: 'PHPStanTurbo\FileAnalyserCallback', implementation: __DIR__ . '/../../turbo-ext/src/FileAnalyserCallback.cpp')]
 final class FileAnalyserCallback
 {
 

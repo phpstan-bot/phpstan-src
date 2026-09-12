@@ -622,6 +622,7 @@ check($matchResults['php'] === $matchResults['native'], 'ScopeOps matchCondition
 // Every shadowed class must be exercised by one of the tests/ scripts; the
 // classes not covered above have their own dedicated script.
 $coveredElsewhere = [
+	\PHPStan\Analyser\FileAnalyserCallback::class => 'file-analyser-callback.php',
 	\PHPStan\Cache\ArenaCache::class => 'arena-smoke.php',
 	\PHPStan\Parser\ParserRunner::class => 'parser-corpus.php',
 	\PHPStan\Reflection\BetterReflection\SourceLocator\PhpFileCleaner::class => 'php-file-cleaner-corpus.php',

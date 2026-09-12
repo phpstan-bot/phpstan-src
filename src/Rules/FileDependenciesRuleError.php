@@ -2,6 +2,8 @@
 
 namespace PHPStan\Rules;
 
+use PHPStan\Turbo\ReferencedByTurboExtension;
+
 /**
  * An error whose existence depends on files other than the one being analysed - a path named in the
  * code that has to exist, a data file read at analysis time. The result cache watches the files
@@ -15,6 +17,7 @@ namespace PHPStan\Rules;
  * @api
  * @api-do-not-implement
  */
+#[ReferencedByTurboExtension(key: 'fileDependenciesRuleError')]
 interface FileDependenciesRuleError extends RuleError
 {
 

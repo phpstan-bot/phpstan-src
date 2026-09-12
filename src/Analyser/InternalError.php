@@ -4,6 +4,7 @@ namespace PHPStan\Analyser;
 
 use JsonSerializable;
 use Override;
+use PHPStan\Turbo\ReferencedByTurboExtension;
 use ReturnTypeWillChange;
 use Throwable;
 use function array_map;
@@ -13,6 +14,7 @@ use function array_unshift;
  * @api
  * @phpstan-type Trace = list<array{file: string|null, line: int|null}>
  */
+#[ReferencedByTurboExtension(key: 'internalError')]
 final class InternalError implements JsonSerializable
 {
 

@@ -3,7 +3,9 @@
 namespace PHPStan;
 
 use Exception;
+use PHPStan\Turbo\ReferencedByTurboExtension;
 
+#[ReferencedByTurboExtension(key: 'analysedCodeException')]
 abstract class AnalysedCodeException extends Exception
 {
 

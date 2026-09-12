@@ -25,9 +25,13 @@ use PhpParser\Node\Name;
 use PhpParser\Node\Scalar;
 use PhpParser\Node\Stmt;
 use PhpParser\Node\Stmt\Class_;
+use PhpParser\Node\Stmt\Trait_;
 use PhpParser\Node\VariadicPlaceholder;
 use PhpParser\NodeTraverser;
 use PhpParser\NodeVisitorAbstract;
+use PHPStan\BetterReflection\NodeCompiler\Exception\UnableToCompileNode;
+use PHPStan\BetterReflection\Reflection\Exception\CircularReference;
+use PHPStan\BetterReflection\Reflector\Exception\IdentifierNotFound;
 use PHPStan\Turbo\ReferencedByTurboExtension;
 use PHPStan\Turbo\ShadowedByTurboExtension;
 use RecursiveDirectoryIterator;
@@ -105,6 +109,12 @@ final class TurboAttributeCollector
 		'nodeVisitorAbstract' => NodeVisitorAbstract::class,
 		'closureExpr' => Closure::class,
 		'arrowFunction' => ArrowFunction::class,
+		'traitStmt' => Trait_::class,
+		// BetterReflection ships vendored under the PHPStan namespace, so
+		// these cannot carry the attribute either
+		'identifierNotFound' => IdentifierNotFound::class,
+		'unableToCompileNode' => UnableToCompileNode::class,
+		'circularReference' => CircularReference::class,
 	];
 
 	private string $realRoot;

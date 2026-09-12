@@ -293,6 +293,9 @@ jobs:
       - name: "Smoke test (differential: native vs PHP implementations)"
         run: php -d extension="$RUNNER_TEMP/turbo-ext/modules/phpstan_turbo.so" turbo-ext/tests/smoke.php
 
+      - name: "File analyser callback (differential: a real analysis through both implementations)"
+        run: php -d extension="$RUNNER_TEMP/turbo-ext/modules/phpstan_turbo.so" -d memory_limit=2G turbo-ext/tests/file-analyser-callback.php
+
       - name: "Arena smoke test (cross-process shared-memory records)"
         # the test's child processes locate the extension through TURBO_DLL —
         # its default, turbo-ext/phpstan_turbo.so, only exists in Makefile builds

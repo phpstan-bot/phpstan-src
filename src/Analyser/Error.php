@@ -8,6 +8,7 @@ use Nette\Utils\Strings;
 use Override;
 use PhpParser\Node;
 use PHPStan\ShouldNotHappenException;
+use PHPStan\Turbo\ReferencedByTurboExtension;
 use ReturnTypeWillChange;
 use Throwable;
 use function array_key_exists;
@@ -17,6 +18,7 @@ use function sprintf;
 /**
  * @api
  */
+#[ReferencedByTurboExtension(key: 'analyserError')]
 final class Error implements JsonSerializable
 {
 
