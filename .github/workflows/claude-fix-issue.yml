@@ -7,6 +7,14 @@ on:
         description: "Issue number from phpstan/phpstan repository"
         required: true
         type: string
+      target-branch:
+        description: "Target branch in phpstan-src"
+        required: true
+        type: choice
+        options: 
+        - 2.3.x
+        - 2.2.x
+
   workflow_call:
     inputs:
       issue-number:
@@ -36,7 +44,7 @@ jobs:
       - name: "Checkout"
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
-          ref: 2.3.x
+          ref: ${{ inputs.target-branch || '2.3.x' }}
           repository: phpstan/phpstan-src
           fetch-depth: 0
 
