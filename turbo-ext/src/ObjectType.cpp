@@ -1630,14 +1630,19 @@ public:
 	 * UNDEF = pending exception */
 	zv::Val toBoolean() const
 	{
-		zend_long undecided = isInstanceOfAny({ "SimpleXMLElement", "BcMath\\Number", "GMP" });
-		if (UNEXPECTED(undecided < 0)) return zv::Val();
+		/* subtypes of POSSIBLY_FALSY_CLASSES; the twin checks
+		 * isInstanceOf() and isSuperTypeOf() per class in one loop, the
+		 * outcome is the same when the two loops run one after the other */
 		zval result;
-		if (undecided == PT_TRI_YES) {
-			if (UNEXPECTED(!pt_boolean_type_new(&result))) return zv::Val();
-			return zv::Val::adopt(result);
+		for (const pt_superglobal_name &className : pt_ot_possibly_falsy_classes) {
+			zend_long is = thisIsInstanceOfLiteral(className.name, className.len);
+			if (UNEXPECTED(is < 0)) return zv::Val();
+			if (is == PT_TRI_YES) {
+				if (UNEXPECTED(!pt_boolean_type_new(&result))) return zv::Val();
+				return zv::Val::adopt(result);
+			}
 		}
-		/* e.g. Countable or Stringable, implemented by these classes */
+		/* supertypes, e.g. Countable or Stringable */
 		zend_long superType = pt_type_is_super_type_of_possibly_falsy_class(self);
 		if (UNEXPECTED(superType < 0)) return zv::Val();
 		if (superType == 1) {

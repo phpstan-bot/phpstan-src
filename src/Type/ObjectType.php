@@ -1050,18 +1050,13 @@ class ObjectType implements TypeWithClassName, SubtractableType
 
 	public function toBoolean(): BooleanType
 	{
-		if (
-			$this->isInstanceOf('SimpleXMLElement')->yes()
-			|| $this->isInstanceOf('BcMath\Number')->yes()
-			|| $this->isInstanceOf('GMP')->yes()
-		) {
-			return new BooleanType();
-		}
-
-		// e.g. Countable or Stringable, implemented by these classes
+		// subtypes of these classes, and supertypes like Countable or Stringable
 		$type = $this instanceof TemplateType ? $this->getBound() : $this;
 		foreach (self::POSSIBLY_FALSY_CLASSES as $className) {
-			if ($type->isSuperTypeOf(new self($className))->yes()) {
+			if (
+				$this->isInstanceOf($className)->yes()
+				|| $type->isSuperTypeOf(new self($className))->yes()
+			) {
 				return new BooleanType();
 			}
 		}
