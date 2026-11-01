@@ -149,11 +149,6 @@ class ElseIfConstantConditionRuleTest extends RuleTestCase
 				46,
 				'Remove remaining cases below this one and this error will disappear too.',
 			],
-			[
-				'Elseif condition is always true.',
-				56,
-				'Remove remaining cases below this one and this error will disappear too.',
-			],
 		]);
 	}
 

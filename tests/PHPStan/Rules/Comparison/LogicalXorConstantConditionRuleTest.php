@@ -67,7 +67,6 @@ class LogicalXorConstantConditionRuleTest extends RuleTestCase
 
 	public function testRule(): void
 	{
-		$tipText = 'Because the type is coming from a PHPDoc, you can turn off this check by setting <fg=cyan>treatPhpDocTypesAsCertain: false</> in your <fg=cyan>%configurationFile%</>.';
 		$this->analyse([__DIR__ . '/data/logical-xor.php'], [
 			[
 				'Left side of xor is always true.',
@@ -84,16 +83,6 @@ class LogicalXorConstantConditionRuleTest extends RuleTestCase
 			[
 				'Right side of xor is always true.',
 				17,
-			],
-			[
-				'Left side of xor is always true.',
-				20,
-				$tipText,
-			],
-			[
-				'Right side of xor is always true.',
-				20,
-				$tipText,
 			],
 			[
 				'Left side of xor is always true.',

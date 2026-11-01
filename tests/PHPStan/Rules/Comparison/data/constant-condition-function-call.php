@@ -2,7 +2,7 @@
 
 namespace ConstantConditionFunctionCall;
 
-function retObj(): \stdClass
+function retObj(): object
 {
 	return new \stdClass();
 }
@@ -19,4 +19,15 @@ function doFoo(int $int): void
 	if (retObj()) {
 		echo 'always';
 	}
+
+	// object can be a falsy GMP, SimpleXMLElement or BcMath\Number,
+	// but stdClass is always truthy
+	if (retStdClass()) {
+		echo 'always';
+	}
+}
+
+function retStdClass(): \stdClass
+{
+	return new \stdClass();
 }

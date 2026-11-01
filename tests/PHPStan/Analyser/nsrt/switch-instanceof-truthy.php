@@ -4,7 +4,7 @@ namespace SwitchInstanceOf;
 
 use function PHPStan\Testing\assertType;
 
-/** @var \stdClass $object */
+/** @var object $object */
 $object = doFoo();
 
 $foo = doFoo();
@@ -19,6 +19,6 @@ switch ($object) {
 	case $baz instanceof Baz:
 		assertType('*ERROR*', $foo);
 		assertType('*ERROR*', $bar);
-		assertType('SwitchInstanceOf\Baz', $baz);
+		assertType('*ERROR*', $baz);
 		break;
 }
