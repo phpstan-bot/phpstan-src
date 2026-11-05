@@ -810,12 +810,12 @@ PT_MINIT_REGISTRATION(pt_register_number_set)
 		ZEND_PARSE_PARAMETERS_NONE();
 		PT_RETURN_VAL(PT_THIS.get(slots::nan, "nan"));
 	});
-	cls.method(sigs::add, pt_ns_operator<phpstanturbo::ietr::IETR_PLUS>);
-	cls.method(sigs::subtract, pt_ns_operator<phpstanturbo::ietr::IETR_MINUS>);
-	cls.method(sigs::multiply, pt_ns_operator<phpstanturbo::ietr::IETR_MUL>);
-	cls.method(sigs::divide, pt_ns_operator<phpstanturbo::ietr::IETR_DIV>);
-	cls.method(sigs::shiftLeft, pt_ns_operator<phpstanturbo::ietr::IETR_SHIFT_LEFT>);
-	cls.method(sigs::shiftRight, pt_ns_operator<phpstanturbo::ietr::IETR_SHIFT_RIGHT>);
+	cls.method(sigs::add, [](INTERNAL_FUNCTION_PARAMETERS) { pt_ns_operator<phpstanturbo::ietr::IETR_PLUS>(INTERNAL_FUNCTION_PARAM_PASSTHRU); });
+	cls.method(sigs::subtract, [](INTERNAL_FUNCTION_PARAMETERS) { pt_ns_operator<phpstanturbo::ietr::IETR_MINUS>(INTERNAL_FUNCTION_PARAM_PASSTHRU); });
+	cls.method(sigs::multiply, [](INTERNAL_FUNCTION_PARAMETERS) { pt_ns_operator<phpstanturbo::ietr::IETR_MUL>(INTERNAL_FUNCTION_PARAM_PASSTHRU); });
+	cls.method(sigs::divide, [](INTERNAL_FUNCTION_PARAMETERS) { pt_ns_operator<phpstanturbo::ietr::IETR_DIV>(INTERNAL_FUNCTION_PARAM_PASSTHRU); });
+	cls.method(sigs::shiftLeft, [](INTERNAL_FUNCTION_PARAMETERS) { pt_ns_operator<phpstanturbo::ietr::IETR_SHIFT_LEFT>(INTERNAL_FUNCTION_PARAM_PASSTHRU); });
+	cls.method(sigs::shiftRight, [](INTERNAL_FUNCTION_PARAMETERS) { pt_ns_operator<phpstanturbo::ietr::IETR_SHIFT_RIGHT>(INTERNAL_FUNCTION_PARAM_PASSTHRU); });
 
 	cls.shadow(&pt_ce_number_set);
 }
