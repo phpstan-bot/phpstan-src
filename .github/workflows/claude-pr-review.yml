@@ -43,14 +43,19 @@ jobs:
         with:
           egress-policy: audit
 
-      - name: Check if review is from phpstan-bot
+      - name: Check if review is from a maintainer
         id: check
         env:
           GH_TOKEN: ${{ secrets.PHPSTAN_BOT_PR_TOKEN }}
         run: |
-          reviewer=$(gh api "repos/phpstan/phpstan-src/pulls/${{ inputs.pr_number }}/reviews/${{ inputs.review_id }}" --jq '.user.login')
+          review=$(gh api "repos/phpstan/phpstan-src/pulls/${{ inputs.pr_number }}/reviews/${{ inputs.review_id }}")
+          reviewer=$(echo "$review" | jq -r '.user.login')
+          association=$(echo "$review" | jq -r '.author_association')
           if [ "$reviewer" = "phpstan-bot" ]; then
             echo "Skipping review from phpstan-bot"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          elif [ "$association" != "OWNER" ] && [ "$association" != "MEMBER" ] && [ "$association" != "COLLABORATOR" ]; then
+            echo "Skipping review from $reviewer ($association), not a maintainer"
             echo "skip=true" >> "$GITHUB_OUTPUT"
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
@@ -62,8 +67,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
+    outputs:
+      pr_head_ref: ${{ steps.review.outputs.pr_head_ref }}
+      pr_head_sha: ${{ steps.review.outputs.pr_head_sha }}
+      claude_outcome: ${{ steps.run-claude.outcome }}
     steps:
       - name: Harden the runner (Audit all outbound calls)
         uses: step-security/harden-runner@5ef0c079ce82195b2a36a210272d6b661572d83e # v2.14.2
@@ -140,7 +148,7 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           ref: ${{ steps.review.outputs.pr_head_ref }}
-          token: ${{ secrets.PHPSTAN_BOT_FORK_TOKEN }}
+          persist-credentials: false
           fetch-depth: 0
 
       - name: "Install PHP"
@@ -360,7 +368,7 @@ jobs:
           prompt+="Please address this review. Make the requested code changes, then run tests with \`make tests\` and static analysis with \`make phpstan\` to verify."
           prompt+=$'\n'
           prompt+="Commit each logical change separately with a descriptive message."
-          prompt+="Push the commits in the repo."
+          prompt+=" Do not push, the commits will be pushed in a separate step. "
           prompt+="The results of this prompt will be posted to the pull request in a separate step."
 
           {
@@ -376,9 +384,9 @@ jobs:
         id: run-claude
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          GH_TOKEN: ${{ secrets.PHPSTAN_BOT_FORK_TOKEN }}
           PROMPT: ${{ steps.prompt.outputs.PROMPT }}
         run: |
+          git rev-parse HEAD > /tmp/base-sha.txt
           git config user.name "phpstan-bot"
           git config user.email "ondrej+phpstanbot@mirtes.cz"
 
@@ -388,14 +396,75 @@ jobs:
             -p "$PROMPT" \
             > /tmp/claude-response.txt
 
+      - name: Save Claude output
+        if: always()
+        run: |
+          mkdir -p /tmp/claude-output
+          if [ -f /tmp/claude-response.txt ]; then
+            cp /tmp/claude-response.txt /tmp/claude-output/response.txt
+          fi
+          base_sha=$(cat /tmp/base-sha.txt)
+          if [ "$(git rev-list --count "$base_sha..HEAD")" -gt 0 ]; then
+            git bundle create /tmp/claude-output/changes.bundle "$base_sha..HEAD"
+          fi
+
+      - name: Upload Claude output
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: claude-output
+          path: /tmp/claude-output/
+          if-no-files-found: ignore
+
+  # Runs in a fresh VM so that nothing the agent left behind can read these tokens.
+  publish:
+    needs: respond
+    if: always() && needs.respond.result != 'skipped'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@5ef0c079ce82195b2a36a210272d6b661572d83e # v2.14.2
+        with:
+          egress-policy: audit
+
+      - name: Download Claude output
+        continue-on-error: true
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: claude-output
+          path: /tmp/claude-output
+
+      - name: "Checkout"
+        if: needs.respond.outputs.claude_outcome == 'success'
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: ${{ needs.respond.outputs.pr_head_ref }}
+          token: ${{ secrets.PHPSTAN_BOT_FORK_TOKEN }}
+
+      - name: Push commits
+        id: push
+        if: needs.respond.outputs.claude_outcome == 'success'
+        env:
+          PR_HEAD_REF: ${{ needs.respond.outputs.pr_head_ref }}
+        run: |
+          if [ ! -f /tmp/claude-output/changes.bundle ]; then
+            echo "No new commits to push"
+            exit 0
+          fi
+          git fetch /tmp/claude-output/changes.bundle HEAD
+          git push origin "FETCH_HEAD:refs/heads/$PR_HEAD_REF"
+
       - name: Reply to review
         if: always()
         env:
           GH_TOKEN: ${{ secrets.PHPSTAN_BOT_PR_TOKEN }}
         run: |
           body=""
-          if [ -f /tmp/claude-response.txt ]; then
-            body=$(cat /tmp/claude-response.txt)
+          if [ -f /tmp/claude-output/response.txt ]; then
+            body=$(cat /tmp/claude-output/response.txt)
           fi
 
           if [ -z "$body" ]; then
@@ -405,7 +474,7 @@ jobs:
           gh api \
             "repos/phpstan/phpstan-src/pulls/${{ inputs.pr_number }}/comments" \
             -f body="$body" \
-            -F in_reply_to="$(jq -r '.[0].id // empty' /tmp/review-comments.json)" \
+            -F in_reply_to="$(gh api "repos/phpstan/phpstan-src/pulls/${{ inputs.pr_number }}/reviews/${{ inputs.review_id }}/comments" --jq '.[0].id // empty')" \
             2>/dev/null \
           || gh pr comment "${{ inputs.pr_number }}" \
             --repo "phpstan/phpstan-src" \
@@ -415,11 +484,12 @@ jobs:
         if: always()
         env:
           GH_TOKEN: ${{ secrets.PHPSTAN_BOT_PR_TOKEN }}
-          PR_HEAD_SHA: ${{ steps.review.outputs.pr_head_sha }}
+          PR_HEAD_SHA: ${{ needs.respond.outputs.pr_head_sha }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          CLAUDE_OUTCOME: ${{ steps.run-claude.outcome }}
+          CLAUDE_OUTCOME: ${{ needs.respond.outputs.claude_outcome }}
+          PUSH_OUTCOME: ${{ steps.push.outcome }}
         run: |
-          if [ "$CLAUDE_OUTCOME" = "success" ]; then
+          if [ "$CLAUDE_OUTCOME" = "success" ] && [ "$PUSH_OUTCOME" != "failure" ]; then
             state=success
             description="Review addressed"
           else
