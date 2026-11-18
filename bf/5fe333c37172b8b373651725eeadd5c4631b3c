@@ -1,0 +1,25 @@
+tests/PHPStan/Analyser/NoBleedingEdgeTypeInferenceTestCase.php
+  s_4f3d932e23002c::t_7a96213dd66854 17
+  h_53f8f6db02589e 1-16,18-33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bf5fe333c37172b8b373651725eeadd5c4631b3c",
+  "prompts": {},
+  "humans": {
+    "h_53f8f6db02589e": {
+      "author": "Markus Staab <markus.staab@redaxo.de>"
+    }
+  },
+  "sessions": {
+    "s_4f3d932e23002c": {
+      "agent_id": {
+        "tool": "github-copilot-jetbrains",
+        "id": "1794817787268",
+        "model": "unknown"
+      },
+      "human_author": null
+    }
+  }
+}
