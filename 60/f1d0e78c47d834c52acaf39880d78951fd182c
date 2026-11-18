@@ -1,0 +1,19 @@
+tests/PHPStan/Analyser/NoBleedingEdgeTypeInferenceTestCase.php
+  s_4bb95f9b86389e::t_3645f00af66443 16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "60f1d0e78c47d834c52acaf39880d78951fd182c",
+  "prompts": {},
+  "sessions": {
+    "s_4bb95f9b86389e": {
+      "agent_id": {
+        "tool": "github-copilot-cli",
+        "id": "2588290f-b671-4d93-b956-6c0935082bad",
+        "model": "unknown"
+      },
+      "human_author": "Markus Staab <markus.staab@redaxo.de>"
+    }
+  }
+}
