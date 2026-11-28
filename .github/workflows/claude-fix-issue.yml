@@ -64,7 +64,6 @@ jobs:
       - name: "Fetch issue details"
         id: issue
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ISSUE_NUMBER: ${{ inputs.issue-number }}
         run: |
           ISSUE_JSON=$(gh issue view "$ISSUE_NUMBER" \
